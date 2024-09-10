@@ -10,10 +10,12 @@ internal class Program
 {
     static void Main(string[] args)
     {
-        // DbRelated.TestDbConnectivity();
+        DbInteractions dbInteractions = new DbInteractions();
 
-        DbRelated.InsertComputerInfo();
+        //dbInteractions..TestDbConnectivity();
 
-        DbRelated.GetComputerInfo();
+        dbInteractions.InsertComputerInfo();
+
+        dbInteractions.GetAllComputersComputerInfo();
     }
 }

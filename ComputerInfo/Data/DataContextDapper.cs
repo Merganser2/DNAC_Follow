@@ -1,4 +1,3 @@
-using ComputerInfo.Models;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using System.Data;
@@ -11,13 +10,13 @@ public class DataContextDapper
         // private string _connectionString = "Server=localhost;Database=DotNetCourseDatabase;Trusted_connection=false;TrustServerCertificate=True;User Id=sa;Password=SQLConnect1;";
         private string _connectionString = "Server=localhost;Database=DotNetCourseDatabase;Trusted_Connection=true;TrustServerCertificate=true;";
             
-        public IEnumerable<T> LoadData<T>(string sql)
+        public IEnumerable<T> GetRows<T>(string sql)
         {
             IDbConnection dbConnection = new SqlConnection(_connectionString);
             return dbConnection.Query<T>(sql);
         }
 
-        public T LoadDataSingle<T>(string sql)
+        public T GetSingleRow<T>(string sql)
         {
             IDbConnection dbConnection = new SqlConnection(_connectionString);
             return dbConnection.QuerySingle<T>(sql);
@@ -33,7 +32,5 @@ public class DataContextDapper
         {
             IDbConnection dbConnection = new SqlConnection(_connectionString);
             return dbConnection.Execute(sql);
-        }
-
-        
+        }        
     }
