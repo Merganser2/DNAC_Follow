@@ -1,8 +1,5 @@
 using ComputerInfo.Data;
 using ComputerInfo.Models;
-using Dapper;
-using Microsoft.Data.SqlClient;
-using System.Data;
 using System.Globalization;
 
 namespace ComputerInfo;
@@ -10,6 +7,8 @@ namespace ComputerInfo;
 internal class DbInteractions
 {
     private DataContextDapper _dapper = new DataContextDapper();
+    // Don't really both Dapper and EF; think this is more to just introduce their behaviors
+    private DataContextEF _entityFramework = new DataContextEF();
 
     internal void InsertComputerInfo()
     {
@@ -19,9 +18,16 @@ internal class DbInteractions
             HasWifi = true,
             HasLTE = false,
             ReleaseDate = DateTime.Now,
-            Price = 943.87m,
+            Price = 944.87m, // changed from 943.87m
             VideoCard = "RTX 2060"
         };
+
+        // Doing same thing with EntityFramework in these two lines, that 
+        //  we are doing with Dapper data context below.
+        //  But we don't
+        _entityFramework.Add(myComputer);
+        int result = _entityFramework.SaveChanges();
+        Console.WriteLine("*** Rows affected by insert according to EF: " + result + "***");
 
         string insertSqlCmd = @"INSERT INTO TutorialAppSchema.Computer (
             Motherboard,
@@ -39,15 +45,18 @@ internal class DbInteractions
                      + "')";
         Console.WriteLine(insertSqlCmd);
 
-        int result = _dapper.ExecuteSqlWithRowCount(insertSqlCmd);
-        Console.WriteLine("*** Rows affected by insert: " + result + "***");
+        // result = _dapper.ExecuteSqlWithRowCount(insertSqlCmd);
+
+        // Console.WriteLine("*** Rows affected by insert according to Dapper: " + result + "***");
     }
 
-    internal void GetAllComputersComputerInfo() {
-            // TODO: When did we add field Computer.ComputerId, ??
-            // Using best practice of fully qualifying fields with Table name
-            string sqlSelect = @"
-            SELECT 
+    internal void GetAllComputersComputerInfo()
+    {
+        // TODO: When did we add field Computer.ComputerId, ??
+        // Using best practice of fully qualifying fields with Table name
+        string sqlSelect = @"
+            SELECT
+                Computer.ComputerId, 
                 Computer.Motherboard,
                 Computer.HasWifi,
                 Computer.HasLTE,
@@ -56,26 +65,30 @@ internal class DbInteractions
                 Computer.VideoCard
              FROM TutorialAppSchema.Computer";
 
-            // This is for when using DataContextDapper
-            IEnumerable<Computer> computers = _dapper.GetRows<Computer>(sqlSelect);
+        IEnumerable<Computer> computers = _dapper.GetRows<Computer>(sqlSelect);
+        IEnumerable<Computer>? computersEF = _entityFramework.Computer?.ToList<Computer>();
 
-            ShowComputerInfo(computers);
+        ShowComputerInfo(computers);
+        ShowComputerInfo(computersEF);
     }
 
-    private static void ShowComputerInfo(IEnumerable<Computer> computers)
+    private static void ShowComputerInfo(IEnumerable<Computer>? computers)
     {
-        Console.WriteLine("'ComputerId','Motherboard','HasWifi','HasLTE','ReleaseDate'" 
+        Console.WriteLine("'ComputerId','Motherboard','HasWifi','HasLTE','ReleaseDate'"
             + ",'Price','VideoCard'");
-        foreach(Computer singleComputer in computers)
+
+        if (computers is not null)
         {
-            // Console.WriteLine("'" + singleComputer.ComputerId 
-            Console.WriteLine("'" + singleComputer.Motherboard  
-                // + "','" + singleComputer.Motherboard
-                + "','" + singleComputer.HasWifi
-                + "','" + singleComputer.HasLTE
-                + "','" + singleComputer.ReleaseDate.ToString("yyyy-MM-dd")
-                + "','" + singleComputer.Price.ToString("0.00", CultureInfo.InvariantCulture) // In some regions decimal requires comma as separator
-                + "','" + singleComputer.VideoCard + "'");
+            foreach (Computer singleComputer in computers)
+            {
+                Console.WriteLine("'" + singleComputer.ComputerId 
+                    + "','" + singleComputer.Motherboard
+                    + "','" + singleComputer.HasWifi
+                    + "','" + singleComputer.HasLTE
+                    + "','" + singleComputer.ReleaseDate.ToString("yyyy-MM-dd")
+                    + "','" + singleComputer.Price.ToString("0.00", CultureInfo.InvariantCulture) // In some regions decimal requires comma as separator
+                    + "','" + singleComputer.VideoCard + "'");
+            }
         }
     }
 
@@ -86,12 +99,13 @@ internal class DbInteractions
         // Dapper command that will return an array of results (rows)
         IEnumerable<DateTime> DateTimeIEnum = _dapper.GetRows<DateTime>(testSqlConnectionCmd);
 
-        foreach (var date in DateTimeIEnum){
+        foreach (var date in DateTimeIEnum)
+        {
             Console.WriteLine(date);
         }
 
         DateTime currentTimeFromDatabase = _dapper.GetSingleRow<DateTime>(testSqlConnectionCmd);
         Console.WriteLine("Now trying single query");
-        Console.WriteLine(currentTimeFromDatabase);        
+        Console.WriteLine(currentTimeFromDatabase);
     }
 }
