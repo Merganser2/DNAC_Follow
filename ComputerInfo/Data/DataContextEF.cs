@@ -1,22 +1,28 @@
 
 using ComputerInfo.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace ComputerInfo.Data;
 
 public class DataContextEF : DbContext
 {
-    private string _connectionString = "Server=localhost;Database=DotNetCourseDatabase;Trusted_Connection=true;TrustServerCertificate=true;";
+    private IConfiguration _config;
+
+    public DataContextEF(IConfiguration configuration)
+    {
+        _config = configuration;
+    }
 
     public DbSet<Computer>? Computer {get; set;}
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
+        // GetConnectionString assumes pair with key "ConnectionStrings" exists in config file
+        string? connectionString = _config.GetConnectionString("DefaultConnection");
         if (!optionsBuilder.IsConfigured) {
-            optionsBuilder.UseSqlServer(_connectionString, options => options.EnableRetryOnFailure());
+            optionsBuilder.UseSqlServer(connectionString, options => options.EnableRetryOnFailure());
         }
-
-        // base.OnConfiguring(optionsBuilder); 
     }
 
     // ModelBuilder maps model to actual table in SQL Server

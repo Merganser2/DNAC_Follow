@@ -1,14 +1,22 @@
 using Dapper;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using System.Data;
 
 namespace ComputerInfo.Data;
 
 public class DataContextDapper
 {
-    // Below for Apple/Linux
-    // private string _connectionString = "Server=localhost;Database=DotNetCourseDatabase;Trusted_connection=false;TrustServerCertificate=True;User Id=sa;Password=SQLConnect1;";
-    private string _connectionString = "Server=localhost;Database=DotNetCourseDatabase;Trusted_Connection=true;TrustServerCertificate=true;";
+    // private IConfiguration _config;
+
+    // Below for Apple/Linux, if we were actually hard-coding it
+    // private string _connectionString = "Server=localhost;Database=DotNetCourseDatabase;Trusted_connection=false;TrustServerCertificate=True;User Id=sa;Password=fakePasswordSQLConnect;";
+    private string? _connectionString;
+
+    public DataContextDapper(IConfiguration configuration)
+    {
+        _connectionString = configuration.GetConnectionString("DefaultConnection");
+    }
 
     public IEnumerable<T> GetRows<T>(string sql)
     {

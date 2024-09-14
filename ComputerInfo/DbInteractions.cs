@@ -1,14 +1,28 @@
 using ComputerInfo.Data;
 using ComputerInfo.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System.Globalization;
 
 namespace ComputerInfo;
 
 internal class DbInteractions
 {
-    private DataContextDapper _dapper = new DataContextDapper();
-    // Don't really both Dapper and EF; think this is more to just introduce their behaviors
-    private DataContextEF _entityFramework = new DataContextEF();
+    private IConfiguration _configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json")
+                                                                      .Build();
+
+    // Don't really need both Dapper and EF; this is more to just introduce their behaviors
+    private readonly DataContextDapper _dapper; 
+    private readonly DataContextEF _entityFramework;
+
+    public DbInteractions()
+    {
+        _configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json")
+                                                              .Build();
+        _dapper = new DataContextDapper(_configuration);
+
+        _entityFramework = new DataContextEF(_configuration);
+    }
 
     internal void InsertComputerInfo()
     {
@@ -43,11 +57,21 @@ internal class DbInteractions
                      + "','" + myComputer.Price
                      + "','" + myComputer.VideoCard
                      + "')";
-        Console.WriteLine(insertSqlCmd);
+        //Console.WriteLine(insertSqlCmd);
 
+        // Uncomment to do same thing with Dapper instead
         // result = _dapper.ExecuteSqlWithRowCount(insertSqlCmd);
-
         // Console.WriteLine("*** Rows affected by insert according to Dapper: " + result + "***");
+
+        // Overwrites any existing file with contents passed in
+        File.WriteAllText("log.txt", "\n" + insertSqlCmd + "\n");
+
+        using StreamWriter openFile = new("log.txt", append: true);
+        openFile.WriteLine(insertSqlCmd);
+        openFile.Close();
+
+        string textFromFile = File.ReadAllText("log.txt");
+        Console.WriteLine(textFromFile);
     }
 
     internal void GetAllComputersComputerInfo()
