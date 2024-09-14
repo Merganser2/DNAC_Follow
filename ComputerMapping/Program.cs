@@ -7,13 +7,13 @@ internal class Program
 {
     static void Main(string[] args)
     {
-        // DbInteractions dbInteractions = new DbInteractions();
+        DbInteractions dbInteractions = new DbInteractions();
 
-        // dbInteractions.InsertComputerInfo();
+        dbInteractions.InsertComputerInfo();
 
-        // dbInteractions.GetAllComputersComputerInfo();
+        dbInteractions.GetAllComputersComputerInfo();
 
-        // dbInteractions.TestDbConnectivity();
+        dbInteractions.TestDbConnectivity();
     }
 }
 
