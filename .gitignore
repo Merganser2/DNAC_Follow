@@ -416,3 +416,7 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+ComputerInfo/log.txt
+
+# Adding stuff
+log.txt
