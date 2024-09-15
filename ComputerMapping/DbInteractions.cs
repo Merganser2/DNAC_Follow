@@ -1,78 +1,72 @@
-
-
 using System.Globalization;
 using ComputerMapping.Data;
 using ComputerMapping.Models;
 using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 
 namespace ComputerMapping;
 
 internal class DbInteractions
 {
-    private IConfiguration _configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json")
-                                                                      .Build();
+    private IConfiguration _config = new ConfigurationBuilder().AddJsonFile("appsettings.json")
+                                                               .Build();
 
-    // Don't really need both Dapper and EF; this is more to just introduce their behaviors
     private readonly DataContextDapper _dapper; 
-    private readonly DataContextEF _entityFramework;
+    private readonly DataContextEF _entityFramework; // Not currently in use but may add back
 
-    public DbInteractions()
+    internal DbInteractions()
     {
-        _configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json")
-                                                              .Build();
-        _dapper = new DataContextDapper(_configuration);
+        _config = new ConfigurationBuilder().AddJsonFile("appsettings.json")
+                                            .Build();
+        _dapper = new DataContextDapper(_config);
 
-        _entityFramework = new DataContextEF(_configuration);
+        _entityFramework = new DataContextEF(_config);
     }
 
-    internal void InsertComputerInfo()
+    internal void InsertComputerInfoFromJson(string jsonPath)
     {
-        Computer myComputer = new Computer()
+        string computersJson = File.ReadAllText(jsonPath);
+
+        // We need these or some values won't get mapped
+        JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
         {
-            Motherboard = "Z690",
-            HasWifi = true,
-            HasLTE = false,
-            ReleaseDate = DateTime.Now,
-            Price = 944.87m, // changed from 943.87m
-            VideoCard = "RTX 2060"
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
-        // Doing same thing with EntityFramework in these two lines, that 
-        //  we are doing with Dapper data context below.
-        //  But we don't
-        _entityFramework.Add(myComputer);
-        int result = _entityFramework.SaveChanges();
-        Console.WriteLine("*** Rows affected by insert according to EF: " + result + "***");
+        // Get the rows to add from the Json file into collection of computers
+        IEnumerable<Computer>? computers = JsonSerializer.Deserialize<IEnumerable<Computer>>(computersJson, jsonOptions);
 
-        string insertSqlCmd = @"INSERT INTO TutorialAppSchema.Computer (
+        // Insert the data to add to the database
+        if (computers is not null)
+        {
+            string startOf_SQL_ComputerInsertCmd = @"INSERT INTO TutorialAppSchema.Computer (
             Motherboard,
             HasWifi,
             HasLTE,
             ReleaseDate,
             Price,
             VideoCard        
-        ) VALUES ('" + myComputer.Motherboard
-                     + "','" + myComputer.HasWifi
-                     + "','" + myComputer.HasLTE
-                     + "','" + myComputer.ReleaseDate
-                     + "','" + myComputer.Price
-                     + "','" + myComputer.VideoCard
-                     + "')";
-        Console.WriteLine(insertSqlCmd);
+            ) VALUES ('";
 
-        // Uncomment to do same thing with Dapper instead
-        // result = _dapper.ExecuteSqlWithRowCount(insertSqlCmd);
-        // Console.WriteLine("*** Rows affected by insert according to Dapper: " + result + "***");
+            foreach (var computer in computers)
+            {
+                string insertSqlCmd = startOf_SQL_ComputerInsertCmd + 
+                          EscapeSingleQuote(computer.Motherboard)
+                + "','" + computer.HasWifi
+                + "','" + computer.HasLTE
+                + "','" + computer.ReleaseDate
+                + "','" + computer.Price
+                + "','" + EscapeSingleQuote(computer.VideoCard)
+                + "')";
 
-        // Overwrites any existing file with contents passed in
-        // File.WriteAllText("log.txt", "\n" + insertSqlCmd + "\n");
+                // Insert the row from Json using Dapper
+                _dapper.ExecuteSql(insertSqlCmd);
+            }
+        }
 
-        // using StreamWriter openFile = new("log.txt", append: true);
-        // openFile.WriteLine(insertSqlCmd);
-        // openFile.Close();
+        string computersCopySystem = JsonSerializer.Serialize(computers, jsonOptions); // System.Text.Json
 
-        // string textFromFile = File.ReadAllText("log.txt");
-        // Console.WriteLine(textFromFile);
+        File.WriteAllText("computersCopySystem.txt", computersCopySystem);        
     }
 
     internal void GetAllComputersComputerInfo()
@@ -91,10 +85,17 @@ internal class DbInteractions
              FROM TutorialAppSchema.Computer";
 
         IEnumerable<Computer> computers = _dapper.GetRows<Computer>(sqlSelect);
-        IEnumerable<Computer>? computersEF = _entityFramework.Computer?.ToList<Computer>();
+        // IEnumerable<Computer>? computersEF = _entityFramework.Computer?.ToList<Computer>();
 
         ShowComputerInfo(computers);
-        ShowComputerInfo(computersEF);
+        // ShowComputerInfo(computersEF);
+    }
+
+    // Single-quote will look like VARCHAR terminator to SQL; 
+    // using two sequentially tells it to put one ' in string
+    private string EscapeSingleQuote(string motherboard)
+    {
+        return motherboard.Replace("'","''");
     }
 
     private static void ShowComputerInfo(IEnumerable<Computer>? computers)
@@ -110,7 +111,7 @@ internal class DbInteractions
                     + "','" + singleComputer.Motherboard
                     + "','" + singleComputer.HasWifi
                     + "','" + singleComputer.HasLTE
-                    + "','" + singleComputer.ReleaseDate.ToString("yyyy-MM-dd")
+                    + "','" + singleComputer.ReleaseDate?.ToString("yyyy-MM-dd")
                     + "','" + singleComputer.Price.ToString("0.00", CultureInfo.InvariantCulture) // In some regions decimal requires comma as separator
                     + "','" + singleComputer.VideoCard + "'");
             }

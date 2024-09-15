@@ -9,11 +9,11 @@ internal class Program
     {
         DbInteractions dbInteractions = new DbInteractions();
 
-        dbInteractions.InsertComputerInfo();
+        dbInteractions.InsertComputerInfoFromJson("Computers.json");
 
         dbInteractions.GetAllComputersComputerInfo();
 
-        dbInteractions.TestDbConnectivity();
+        // dbInteractions.TestDbConnectivity();
     }
 }
 
