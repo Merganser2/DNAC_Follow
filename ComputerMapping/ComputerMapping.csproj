@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Automapper" Version="13.0.1" />
     <PackageReference Include="Dapper" Version="2.1.35" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.8" />
@@ -16,6 +17,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
     <None Update="appsettings.json"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
     <None Update="computers.json"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+    <None Update="computersSnake.json"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
   </ItemGroup>
 
 </Project>

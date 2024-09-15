@@ -3,6 +3,7 @@ using ComputerMapping.Data;
 using ComputerMapping.Models;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json;
+using AutoMapper;
 
 namespace ComputerMapping;
 
@@ -69,6 +70,88 @@ internal class DbInteractions
         File.WriteAllText("computersCopySystem.txt", computersCopySystem);        
     }
 
+    internal void InsertComputerInfoFromJsonUsingMapper(string jsonPath)
+    {
+        string computersJson = File.ReadAllText(jsonPath); // passing in json file with underscores in keys
+
+        Mapper mapper = GetComputerSnake_to_ComputerMapper(); 
+
+        // We need these or some values won't get mapped
+        JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
+        IEnumerable<ComputerSnake>? computerSnakes = JsonSerializer.Deserialize<IEnumerable<ComputerSnake>>(computersJson, jsonOptions);
+
+        if (computerSnakes is not null)
+        {
+            List<Computer> computers = new List<Computer>();
+
+            foreach (var computerSnake in computerSnakes){
+                var computer = mapper.Map<Computer>(computerSnake);
+                computers.Add(computer);
+            }
+
+            InsertComputersIntoDb<Computer>(computers);
+            string computersCopySystem = JsonSerializer.Serialize(computers, jsonOptions); // System.Text.Json
+
+            File.WriteAllText("computersCopySystem.txt", computersCopySystem);        
+        }
+    }
+
+    private Mapper GetComputerSnake_to_ComputerMapper()
+    {
+        return new Mapper(new MapperConfiguration((cfg) =>
+        {
+            cfg.CreateMap<ComputerSnake, Computer>()
+             .ForMember(destination => destination.ComputerId, options =>
+                 options.MapFrom(source => source.computer_id))
+             .ForMember(destination => destination.CPUCores, options =>
+                 options.MapFrom(source => source.cpu_cores))
+             .ForMember(destination => destination.HasLTE, options =>
+                 options.MapFrom(source => source.has_lte))
+             .ForMember(destination => destination.HasWifi, options =>
+                 options.MapFrom(source => source.has_wifi))
+             .ForMember(destination => destination.Motherboard, options =>
+                 options.MapFrom(source => source.motherboard))
+             .ForMember(destination => destination.VideoCard, options =>
+                 options.MapFrom(source => source.video_card))
+             .ForMember(destination => destination.ReleaseDate, options =>
+                 options.MapFrom(source => source.release_date))
+             .ForMember(destination => destination.Price, options =>
+                 options.MapFrom(source => source.price));
+        }));
+    }
+
+    private void InsertComputersIntoDb<Computers>(IEnumerable<Computer> computers)
+    {
+        // Insert the data to add to the database
+        string startOf_SQL_ComputerInsertCmd = @"INSERT INTO TutorialAppSchema.Computer (
+        Motherboard,
+        HasWifi,
+        HasLTE,
+        ReleaseDate,
+        Price,
+        VideoCard        
+        ) VALUES ('";
+
+        foreach (var computer in computers)
+        {
+            string insertSqlCmd = startOf_SQL_ComputerInsertCmd + 
+                        EscapeSingleQuote(computer.Motherboard)
+            + "','" + computer.HasWifi
+            + "','" + computer.HasLTE
+            + "','" + computer.ReleaseDate
+            + "','" + computer.Price
+            + "','" + EscapeSingleQuote(computer.VideoCard)
+            + "')";
+
+            // Insert the row from Json using Dapper
+            _dapper.ExecuteSql(insertSqlCmd);
+        }
+    }
+
     internal void GetAllComputersComputerInfo()
     {
         // TODO: When did we add field Computer.ComputerId, ??
@@ -93,9 +176,12 @@ internal class DbInteractions
 
     // Single-quote will look like VARCHAR terminator to SQL; 
     // using two sequentially tells it to put one ' in string
-    private string EscapeSingleQuote(string motherboard)
+    private string EscapeSingleQuote(string? sqlCmdText)
     {
-        return motherboard.Replace("'","''");
+        // TODO: make this better
+        if (sqlCmdText is not null)
+        return sqlCmdText.Replace("'","''");
+        else return "";
     }
 
     private static void ShowComputerInfo(IEnumerable<Computer>? computers)
