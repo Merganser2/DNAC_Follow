@@ -9,7 +9,7 @@ internal class Program
     {
         DbInteractions dbInteractions = new DbInteractions();
 
-        dbInteractions.InsertComputerInfoFromJsonUsingMapper("ComputersSnake.json");
+        dbInteractions.InsertComputerInfoFromJsonUsingAutoMapper("ComputersSnake.json");
         //dbInteractions.InsertComputerInfoFromJson("Computers.json");
 
         dbInteractions.GetAllComputersComputerInfo();

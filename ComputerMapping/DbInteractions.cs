@@ -70,28 +70,25 @@ internal class DbInteractions
         File.WriteAllText("computersCopySystem.txt", computersCopySystem);        
     }
 
-    internal void InsertComputerInfoFromJsonUsingMapper(string jsonPath)
+    internal void InsertComputerInfoFromJsonUsingAutoMapper(string jsonPath)
     {
         string computersJson = File.ReadAllText(jsonPath); // passing in json file with underscores in keys
 
         Mapper mapper = GetComputerSnake_to_ComputerMapper(); 
 
-        // We need these or some values won't get mapped
+        // We don't need the JsonSerializerOptions because Model already matches the Json file
+        IEnumerable<ComputerSnake>? computerSnakes = JsonSerializer.Deserialize<IEnumerable<ComputerSnake>>(computersJson);
+
+        // We still want these for serialization though (?)
         JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
-        IEnumerable<ComputerSnake>? computerSnakes = JsonSerializer.Deserialize<IEnumerable<ComputerSnake>>(computersJson, jsonOptions);
-
         if (computerSnakes is not null)
         {
-            List<Computer> computers = new List<Computer>();
-
-            foreach (var computerSnake in computerSnakes){
-                var computer = mapper.Map<Computer>(computerSnake);
-                computers.Add(computer);
-            }
+            // Notice mapper can also convert to/from an IEnumerable of the source/destination models
+            var computers = mapper.Map<IEnumerable<Computer>>(computerSnakes);
 
             InsertComputersIntoDb<Computer>(computers);
             string computersCopySystem = JsonSerializer.Serialize(computers, jsonOptions); // System.Text.Json
@@ -147,6 +144,7 @@ internal class DbInteractions
             + "','" + EscapeSingleQuote(computer.VideoCard)
             + "')";
 
+            Console.WriteLine(computer.Motherboard);
             // Insert the row from Json using Dapper
             _dapper.ExecuteSql(insertSqlCmd);
         }
