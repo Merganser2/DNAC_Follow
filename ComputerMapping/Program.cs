@@ -7,9 +7,13 @@ internal class Program
 {
     static void Main(string[] args)
     {
+
         DbInteractions dbInteractions = new DbInteractions();
 
-        dbInteractions.InsertComputerInfoFromJsonUsingAutoMapper("ComputersSnake.json");
+        dbInteractions.ClearAllComputerInfo(); // Truncate the table
+
+        //dbInteractions.InsertComputerInfoFromSnakeJsonUsingJsonAttributes("ComputersSnake.json");
+        dbInteractions.InsertComputerInfoFromSnakeJsonUsingAutoMapper("ComputersSnake.json");
         //dbInteractions.InsertComputerInfoFromJson("Computers.json");
 
         dbInteractions.GetAllComputersComputerInfo();

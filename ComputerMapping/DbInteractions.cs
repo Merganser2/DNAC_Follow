@@ -70,7 +70,24 @@ internal class DbInteractions
         File.WriteAllText("computersCopySystem.txt", computersCopySystem);        
     }
 
-    internal void InsertComputerInfoFromJsonUsingAutoMapper(string jsonPath)
+    // Uses JsonPropertyName attributes that we added above each property in Computer model
+    internal void InsertComputerInfoFromSnakeJsonUsingJsonAttributes(string jsonPath)
+    {
+        string computersJson = File.ReadAllText(jsonPath); // passing in json file with underscores in keys
+
+        // We can directly Deserialize into a Computer model because JsonPropertyName attributes convert the properties,
+        IEnumerable<Computer>? computers = JsonSerializer.Deserialize<IEnumerable<Computer>>(computersJson);
+
+        if (computers is not null)
+        {
+            InsertComputersIntoDb<Computer>(computers);
+            string computersCopySystem = JsonSerializer.Serialize(computers); // System.Text.Json
+
+            File.WriteAllText("computersUsingJsonAttributes.txt", computersCopySystem);        
+        }
+    }
+
+    internal void InsertComputerInfoFromSnakeJsonUsingAutoMapper(string jsonPath)
     {
         string computersJson = File.ReadAllText(jsonPath); // passing in json file with underscores in keys
 
@@ -79,7 +96,7 @@ internal class DbInteractions
         // We don't need the JsonSerializerOptions because Model already matches the Json file
         IEnumerable<ComputerSnake>? computerSnakes = JsonSerializer.Deserialize<IEnumerable<ComputerSnake>>(computersJson);
 
-        // We still want these for serialization though (?)
+        // We can use these for serialization if we want output json to follow Camel Case convention
         JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -93,7 +110,7 @@ internal class DbInteractions
             InsertComputersIntoDb<Computer>(computers);
             string computersCopySystem = JsonSerializer.Serialize(computers, jsonOptions); // System.Text.Json
 
-            File.WriteAllText("computersCopySystem.txt", computersCopySystem);        
+            File.WriteAllText("computersCopyAutomapper.txt", computersCopySystem);        
         }
     }
 
@@ -144,7 +161,7 @@ internal class DbInteractions
             + "','" + EscapeSingleQuote(computer.VideoCard)
             + "')";
 
-            Console.WriteLine(computer.Motherboard);
+            // Console.WriteLine(computer.Motherboard); // Sanity check
             // Insert the row from Json using Dapper
             _dapper.ExecuteSql(insertSqlCmd);
         }
@@ -152,7 +169,6 @@ internal class DbInteractions
 
     internal void GetAllComputersComputerInfo()
     {
-        // TODO: When did we add field Computer.ComputerId, ??
         // Using best practice of fully qualifying fields with Table name
         string sqlSelect = @"
             SELECT
@@ -165,21 +181,31 @@ internal class DbInteractions
                 Computer.VideoCard
              FROM TutorialAppSchema.Computer";
 
+        // With Dapper
         IEnumerable<Computer> computers = _dapper.GetRows<Computer>(sqlSelect);
-        // IEnumerable<Computer>? computersEF = _entityFramework.Computer?.ToList<Computer>();
-
         ShowComputerInfo(computers);
+
+        // With Entity Framework
+        // IEnumerable<Computer>? computersEF = _entityFramework.Computer?.ToList<Computer>();
         // ShowComputerInfo(computersEF);
+    }
+
+    internal void ClearAllComputerInfo()
+    {
+        string sqlSelect = "TRUNCATE TABLE TutorialAppSchema.Computer";
+
+        // With Dapper
+        int rowsRemoved = _dapper.ExecuteSqlWithRowCount(sqlSelect);
+        Console.WriteLine(rowsRemoved + " rows removed.");
     }
 
     // Single-quote will look like VARCHAR terminator to SQL; 
     // using two sequentially tells it to put one ' in string
-    private string EscapeSingleQuote(string? sqlCmdText)
+    private string EscapeSingleQuote(string? sqlCmdText) // TODO: change back
     {
-        // TODO: make this better
         if (sqlCmdText is not null)
         return sqlCmdText.Replace("'","''");
-        else return "";
+        else return "";        
     }
 
     private static void ShowComputerInfo(IEnumerable<Computer>? computers)
