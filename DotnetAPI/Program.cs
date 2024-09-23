@@ -1,4 +1,6 @@
 // builder perpetually listens for requests
+using Microsoft.AspNetCore.Cors.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
@@ -8,6 +10,30 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Angular, React, Vue
+string[] singlePageApplications = new string[] {"http:\\localhost:4200", "http:\\localhost:3000", "http:\\localhost:8000"};
+builder.Services.AddCors((options) =>
+{
+    options.AddPolicy("DevCors", (corsBuilder) =>
+    {
+        // List of major front end single page applications we might want to allow (Angular, React, Vue)
+        // Restrict once decided which one(s) will be used
+        corsBuilder.WithOrigins(singlePageApplications)
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
+    });
+       options.AddPolicy("ProdCors", (corsBuilder) =>
+    {
+        corsBuilder.WithOrigins("https:\\DomainNameOfFrontEndOnProductionSite.com")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
+    });
+});
+
+//////////////// app below ////////////////////////
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -16,7 +42,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-else {
+else
+{
     // More for production API, redirects User to secure endpoint  
     //  and use SSL certificate
     app.UseHttpsRedirection();
