@@ -30,26 +30,36 @@ public class UserEFController : ControllerBase
     {
         User? user = _entityFramework.Users?.Where(user => user.UserId == userId)
                               .FirstOrDefault<User>();
-        return user;
+        
+        if (user != null)
+        {
+            return user;
+        }
+        
+        throw new Exception("Failed to Get User");
     }
 
     [HttpPut("EditUser")]
     public IActionResult EditUser(User user)
     {
-        User? userToUpdate = new User();
-        userToUpdate.UserId = user.UserId;
-        userToUpdate.FirstName = user.FirstName;
-        userToUpdate.LastName = user.LastName;
-        userToUpdate.Email = user.Email;
-        userToUpdate.Gender = user.Gender;
-        userToUpdate.Active = user.Active;        
-
-        _entityFramework.Users?.Update(userToUpdate);
-
-        if (_entityFramework.SaveChanges() > 0)
+        User? userToUpdate = _entityFramework.Users?
+                                              .Where(uji => uji.UserId == user.UserId)
+                                              .SingleOrDefault();
+        if (userToUpdate is not null)
         {
-            return Ok();
-        } 
+            userToUpdate.FirstName = user.FirstName;
+            userToUpdate.LastName = user.LastName;
+            userToUpdate.Email = user.Email;
+            userToUpdate.Gender = user.Gender;
+            userToUpdate.Active = user.Active;
+
+            if (_entityFramework.SaveChanges() > 0)
+            {
+                return Ok();
+            }
+
+            throw new Exception("Failed to Get User for update");
+        }
 
         throw new Exception("Failed to Update User");
     }
@@ -57,18 +67,20 @@ public class UserEFController : ControllerBase
     [HttpPost("AddUser")]
     public IActionResult AddUser(UserToAddDto user)
     {
-        User? userToAdd = new User();
-        userToAdd.FirstName = user.FirstName;
-        userToAdd.LastName = user.LastName;
-        userToAdd.Email = user.Email;
-        userToAdd.Gender = user.Gender;
-        userToAdd.Active = user.Active;        
+        User? userToAdd = new()
+        {
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Gender = user.Gender,
+            Active = user.Active
+        };
 
         _entityFramework.Users?.Add(userToAdd);
         if (_entityFramework.SaveChanges() > 0)
         {
             return Ok();
-        } 
+        }
 
         throw new Exception("Failed to Add User");
     }
@@ -86,7 +98,7 @@ public class UserEFController : ControllerBase
         if (_entityFramework.SaveChanges() > 0)
         {
             return Ok();
-        } 
+        }
 
         throw new Exception($"Failed to Remove User {userId}");
     }
@@ -96,7 +108,7 @@ public class UserEFController : ControllerBase
     */
     [HttpGet("GetAllUsersJobInfo")]
     public IEnumerable<UserJobInfo>? GetAllUsersJobInfo()
-    {
+    {        
         return _entityFramework.UserJobInfo?.ToList();
     }
 
@@ -106,25 +118,32 @@ public class UserEFController : ControllerBase
         UserJobInfo? jobInfo = _entityFramework.UserJobInfo?.Where(ji => ji.UserId == userId)
                                   .FirstOrDefault<UserJobInfo>();
 
-        return jobInfo;
+        if (jobInfo != null)
+        {
+            return jobInfo;
+        }
+
+        throw new Exception("Failed to Get Job Info");
     }
 
     [HttpPut("EditUserJobInfo")]
     public IActionResult EditUserJobInfo(UserJobInfo userJobInfo)
     {
-        UserJobInfo? userJobInfoForUpdate = new()
+        UserJobInfo? userJobInfoForUpdate = _entityFramework.UserJobInfo?
+                                                            .Where(uji => uji.UserId == userJobInfo.UserId)
+                                                            .SingleOrDefault();
+        if (userJobInfoForUpdate is not null)
         {
-            UserId = userJobInfo.UserId,
-            Department = userJobInfo.Department,
-            JobTitle = userJobInfo.JobTitle
-        };
+            userJobInfoForUpdate.Department = userJobInfo.Department;
+            userJobInfoForUpdate.JobTitle = userJobInfo.JobTitle;
 
-        _entityFramework.UserJobInfo?.Update(userJobInfoForUpdate);
+            if (_entityFramework.SaveChanges() > 0)
+            {
+                return Ok();
+            }
 
-        if (_entityFramework.SaveChanges() > 0)
-        {
-            return Ok();
-        } 
+            throw new Exception("Failed to Get UserJobInfo for update");
+        }
 
         throw new Exception("Failed to Update UserJobInfo");
     }
@@ -133,12 +152,12 @@ public class UserEFController : ControllerBase
     public IActionResult AddUserJobInfo(UserJobInfo userJobInfoForInsert)
     {
         _entityFramework.UserJobInfo?.Add(userJobInfoForInsert);
-        _entityFramework.SaveChanges(); 
+        _entityFramework.SaveChanges();
 
         if (_entityFramework.SaveChanges() > 0)
         {
             return Ok();
-        } 
+        }
 
         throw new Exception("Failed to Add UserJobInfo");
     }
@@ -156,7 +175,7 @@ public class UserEFController : ControllerBase
         if (_entityFramework.SaveChanges() > 0)
         {
             return Ok();
-        } 
+        }
         throw new Exception($"Failed to Remove UserJobInfo {userId}");
     }
 
@@ -175,24 +194,30 @@ public class UserEFController : ControllerBase
         UserSalary? salary = _entityFramework.UserSalary?.Where(s => s.UserId == userId)
                                 .FirstOrDefault<UserSalary>();
 
-        return salary;
+        if (salary != null)
+        {
+            return salary;
+        }
+        throw new Exception("Failed to Get User Salary");
     }
 
     [HttpPut("EditUserSalary")]
     public IActionResult EditUserSalary(UserSalary userSalary)
     {
-        UserSalary? userSalaryForUpdate = new()
+        UserSalary? userSalaryForUpdate = _entityFramework.UserSalary?
+                                                          .Where(u => u.UserId == userSalary.UserId)
+                                                          .SingleOrDefault();
+        if (userSalaryForUpdate is not null)
         {
-            UserId = userSalary.UserId,
-            Salary = userSalary.Salary
-        };
+            userSalaryForUpdate.Salary = userSalary.Salary;
 
-        _entityFramework.UserSalary?.Update(userSalaryForUpdate);
+            if (_entityFramework.SaveChanges() > 0)
+            {
+                return Ok();
+            }
 
-        if (_entityFramework.SaveChanges() > 0)
-        {
-            return Ok();
-        } 
+            throw new Exception("Failed to Get User Salary for update");
+        }
 
         throw new Exception("Failed to update User Salary");
     }
@@ -205,7 +230,7 @@ public class UserEFController : ControllerBase
         if (_entityFramework.SaveChanges() > 0)
         {
             return Ok();
-        } 
+        }
 
         throw new Exception("Failed to Add UserSalary");
     }
@@ -226,7 +251,7 @@ public class UserEFController : ControllerBase
         if (_entityFramework.SaveChanges() > 0)
         {
             return Ok();
-        } 
+        }
         throw new Exception($"Failed to Remove UserSalary {userId}");
     }
 }
