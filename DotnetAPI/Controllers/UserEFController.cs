@@ -113,12 +113,6 @@ public class UserEFController : ControllerBase
     /* 
         CRUD for UserJobInfo 
     */
-    [HttpGet("GetAllUsersJobInfo")]
-    public IEnumerable<UserJobInfo>? GetAllUsersJobInfo()
-    {        
-        return _entityFramework.UserJobInfo?.ToList();
-    }
-
     [HttpGet("UserJobInfo/{userId}")]
     public UserJobInfo? UserJobInfo(int userId)
     {
@@ -187,12 +181,6 @@ public class UserEFController : ControllerBase
     /* 
         CRUD for UserSalary 
     */
-    [HttpGet("GetAllUsersSalary")]
-    public IEnumerable<UserSalary>? GetAllUsersSalary()
-    {
-        return _entityFramework.UserSalary?.ToList();
-    }
-
     [HttpGet("UserSalary/{userId}")]
     public UserSalary? UserSalary(int userId)
     {

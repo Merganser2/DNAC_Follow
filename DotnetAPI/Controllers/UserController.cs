@@ -103,21 +103,11 @@ public class UserController : ControllerBase
     /* 
         CRUD for UserJobInfo 
     */
-    [HttpGet("GetAllUsersJobInfo")]
-    public IEnumerable<UserJobInfo> GetAllUsersJobInfo()
-    {
-        string getUserJobInfoQuery = @"SELECT [UserId],
-        [Department],[JobTitle]
-        FROM TutorialAppSchema.UserJobInfo";
-
-        return _dapper.LoadData<UserJobInfo>(getUserJobInfoQuery);
-    }
-
    [HttpGet("UserJobInfo/{userId}")]
     public UserJobInfo UserJobInfo(int userId)    
     {
         string sql = @$"
-            SELECT * 
+            SELECT [UserId],[Department],[JobTitle] 
             FROM TutorialAppSchema.UserJobInfo
             WHERE UserJobInfo.UserId = {userId}"; 
 
@@ -172,18 +162,9 @@ public class UserController : ControllerBase
         throw new Exception($"Failed to Remove UserJobInfo {userId}");
     }
 
-    /* 
-        CRUD for UserSalary 
-    */
-    [HttpGet("GetAllUsersSalary")]
-    public IEnumerable<UserSalary> GetAllUsersSalary()
-    {
-        string getUserSalaryQuery = @"SELECT [UserId],[Salary]
-        FROM TutorialAppSchema.UserSalary";
-
-        return _dapper.LoadData<UserSalary>(getUserSalaryQuery);
-    }
-
+   /* 
+       CRUD for UserSalary 
+   */
    [HttpGet("UserSalary/{userId}")]
     public UserSalary UserSalary(int userId)    
     {
