@@ -1,4 +1,5 @@
 // builder perpetually listens for requests
+using DotnetAPI.Data;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,6 +32,9 @@ builder.Services.AddCors((options) =>
             .AllowCredentials();
     });
 });
+
+// Repository
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 //////////////// app below ////////////////////////
 
