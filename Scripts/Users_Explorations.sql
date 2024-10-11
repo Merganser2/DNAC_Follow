@@ -2,7 +2,14 @@
 -- Ctrl-Shift-p brings up command search, select "Refresh Intellisense Cache"
 
 USE DotNetCourseDatabase
-GO
+GO 
+
+SELECT COUNT(*) FROM TutorialAppSchema.Users
+
+SELECT * FROM TutorialAppSchema.Users
+
+DELETE FROM TutorialAppSchema.Users
+WHERE UserId = 1004
 
 -- Click after the *, then Ctrl-Space to expand (restarted ADS to get it to work)
 -- SELECT [UserId],[FirstName],[LastName],[Email],[Gender],
@@ -60,6 +67,6 @@ WHERE EXISTS (
 SELECT UserId, Salary FROM TutorialAppSchema.UserSalary
 UNION -- Distinct /* Between the two queries */
 --UNION ALL -- not Distinct between the two
-SELECT UserId, Salary FROM TutorialAppSchema.UserSalary
+SELECT UserId, Salary FROM TutorialAppSchema.UserSalary;
 
 -- Side note: BETWEEN is inclusive of endpoints

@@ -36,4 +36,26 @@ public class DataContextDapper
         IDbConnection dbConnection = new SqlConnection(_connectionString);
         return dbConnection.Execute(sql);
     }
+
+    public bool ExecuteSqlWithParameters(string sql, List<SqlParameter> parameters)
+        {
+            SqlCommand commandWithParams = new (sql);
+
+            foreach(SqlParameter parameter in parameters)
+            {
+                commandWithParams.Parameters.Add(parameter);
+            }
+
+            // NOTE that we use a SqlConnection instead of IDbConnection....
+            SqlConnection dbConnection = new (_connectionString);
+            dbConnection.Open();
+
+            commandWithParams.Connection = dbConnection;
+
+            int rowsAffected = commandWithParams.ExecuteNonQuery();
+
+            dbConnection.Close();
+
+            return rowsAffected > 0;
+        }
 }
