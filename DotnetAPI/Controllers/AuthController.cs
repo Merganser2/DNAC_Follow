@@ -1,12 +1,16 @@
 using System.Data;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using DotnetAPI.Data;
 using DotnetAPI.DTOs;
 using DotnetAPI.Models;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.IdentityModel.Tokens;
 
 namespace DotnetAPI.Controllers;
 
@@ -31,7 +35,7 @@ public class AuthController : ControllerBase
                                          userForRegistration.Email + "'";
 
             IEnumerable<string> existingUsers = _dapper.LoadData<string>(sqlCheckUserExists);
-            if (existingUsers.Count() == 0)
+            if (!existingUsers.Any())
             {
                 byte[] passwordSalt = GetPasswordSalt();
                 byte[] passwordHash = GetPasswordHash(userForRegistration.Password, passwordSalt);
@@ -91,14 +95,21 @@ public class AuthController : ControllerBase
         // We must compare the values because Hashes are objects and thus will not be equal
         for (int index = 0; index < passwordHash.Length; index++)
         {
-            // TODO: Remove
-            Console.Write($" {index}: {passwordHash[index]}");
-            if (passwordHash[index] != userForConfirmation.PasswordHash[index]){
+            if (passwordHash[index] != userForConfirmation.PasswordHash[index])
+            {
                 return StatusCode(401, "Incorrect password!");
-            }            
+            }
         }
+
+        string sqlToGetUserId = @"SELECT [Users].[UserId]
+                                  FROM DotNetCourseDatabase.TutorialAppSchema.Users
+                                  WHERE Users.Email = '" + userForLogin.Email + "'";
+        int userId = _dapper.LoadDataSingle<int>(sqlToGetUserId);
+
         Console.WriteLine();
-        return Ok();
+        return Ok(new Dictionary<string, string>{
+                {"token", CreateToken(userId)}
+            });
     }
 
     private byte[] GetPasswordSalt()
@@ -125,5 +136,36 @@ public class AuthController : ControllerBase
             iterationCount: 1000000,
             numBytesRequested: 256 / 8
         );
+    }
+
+    private string CreateToken(int userId)
+    {
+        Claim[] claims = [
+            new Claim("userId", userId.ToString())
+        ];
+
+        string? tokenKeyString = _config.GetSection("AppSettings:TokenKey").Value;
+
+        // Coalesce to null to solve the warning. Also NOTE, the string must be greater than 512 bits, or will get
+        // ArgumentOutOfRangeException: IDX10720: Unable to create KeyedHashAlgorithm for algorithm 'http://www.w3.org/2001/04/xmldsig-more#hmac-sha512',  
+        // the key size must be greater than: '512' bits, key has '384' bits. See https://aka.ms/IdentityModel/UnsafeRelaxHmacKeySizeValidation (Parameter 'keyBytes')
+        // When running tokenHandler.CreateToken below
+        SymmetricSecurityKey symmetricTokenKey = new(Encoding.UTF8.GetBytes(tokenKeyString ?? ""));
+
+        SigningCredentials credentials = new(symmetricTokenKey, SecurityAlgorithms.HmacSha512Signature);
+
+        SecurityTokenDescriptor descriptor = new()
+        {
+            Subject = new ClaimsIdentity(claims),
+            SigningCredentials = credentials,
+            Expires = DateTime.Now.AddDays(1)
+        };
+
+        // Just a class that has some of the methods we need to 
+        JwtSecurityTokenHandler tokenHandler = new();
+
+        SecurityToken token = tokenHandler.CreateToken(descriptor);
+
+        return tokenHandler.WriteToken(token); // converts it to a string that...
     }
 }
