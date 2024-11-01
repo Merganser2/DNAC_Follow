@@ -5,7 +5,8 @@ using System.Security.Cryptography;
 using System.Text;
 using DotnetAPI.Data;
 using DotnetAPI.DTOs;
-using DotnetAPI.Models;
+using DotnetAPI.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Mvc;
@@ -14,17 +15,22 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace DotnetAPI.Controllers;
 
+[Authorize]
+[ApiController]
+[Route("[controller]")]
 public class AuthController : ControllerBase
 {
     private readonly DataContextDapper _dapper;
-    private readonly IConfiguration _config;
+
+    private readonly AuthHelper _authHelper;
 
     public AuthController(IConfiguration config)
     {
-        _config = config;
         _dapper = new DataContextDapper(config);
+        _authHelper = new AuthHelper(config);
     }
 
+    [AllowAnonymous]
     [HttpPost("Register")]
     public IActionResult Register(UserForRegistrationDto userForRegistration)
     {
@@ -37,8 +43,8 @@ public class AuthController : ControllerBase
             IEnumerable<string> existingUsers = _dapper.LoadData<string>(sqlCheckUserExists);
             if (!existingUsers.Any())
             {
-                byte[] passwordSalt = GetPasswordSalt();
-                byte[] passwordHash = GetPasswordHash(userForRegistration.Password, passwordSalt);
+                byte[] passwordSalt = _authHelper.GetPasswordSalt();    
+                byte[] passwordHash = _authHelper.GetPasswordHash(userForRegistration.Password, passwordSalt);
 
                 string sqlAddAuth = @"
                         INSERT INTO TutorialAppSchema.Auth ([Email],
@@ -82,6 +88,7 @@ public class AuthController : ControllerBase
         throw new Exception("Passwords do not match!");
     }
 
+    [AllowAnonymous]
     [HttpPost("Login")]
     public IActionResult Login(UserForLoginDto userForLogin)
     {
@@ -90,7 +97,7 @@ public class AuthController : ControllerBase
 
         UserForLoginConfirmationDto userForConfirmation = _dapper.LoadDataSingle<UserForLoginConfirmationDto>(sqlForHashAndSalt);
 
-        byte[] passwordHash = GetPasswordHash(userForLogin.Password, userForConfirmation.PasswordSalt);
+        byte[] passwordHash = _authHelper.GetPasswordHash(userForLogin.Password, userForConfirmation.PasswordSalt);
 
         // We must compare the values because Hashes are objects and thus will not be equal
         for (int index = 0; index < passwordHash.Length; index++)
@@ -106,66 +113,33 @@ public class AuthController : ControllerBase
                                   WHERE Users.Email = '" + userForLogin.Email + "'";
         int userId = _dapper.LoadDataSingle<int>(sqlToGetUserId);
 
-        Console.WriteLine();
         return Ok(new Dictionary<string, string>{
-                {"token", CreateToken(userId)}
+                {"token", _authHelper.CreateToken(userId)}
             });
     }
 
-    private byte[] GetPasswordSalt()
+    [HttpGet("RefreshToken")]
+    public IActionResult RefreshToken()
     {
-        byte[] passwordSalt = new byte[128 / 8]; //128 bytes
+        // User from ControllerBase, not Model...
+        // Get the first Claim found matching "userId" or null if not found
+        // If we get a non-empty value, we know the token is valid, and can return them a new token
+        string userId = User.FindFirst("userId")?.Value ?? "";
 
-        using (RandomNumberGenerator rand = RandomNumberGenerator.Create())
-        {
-            rand.GetNonZeroBytes(passwordSalt);
+        if (userId.Length > 0) {
+
+        // He's suggesting to use SQL call instead of converting to/from string/int
+        string userIdSql = @"SELECT UserId FROM DotNetCourseDatabase.TutorialAppSchema.Users
+                             WHERE UserId = " + userId;
+
+        int userIdFromDb = _dapper.LoadDataSingle<int>(userIdSql);
+
+        // But what if userId is "", thus
+        return Ok(new Dictionary<string, string>{
+            {"token", _authHelper.CreateToken(userIdFromDb)}
+        });
+
         }
-
-        return passwordSalt;
-    }
-
-    private byte[] GetPasswordHash(string password, byte[] passwordSalt)
-    {
-        string passwordSaltPlusString = _config.GetSection("AppSettings:PasswordKey").Value +
-            Convert.ToBase64String(passwordSalt);
-
-        return KeyDerivation.Pbkdf2(
-            password: password,
-            salt: Encoding.ASCII.GetBytes(passwordSaltPlusString),
-            prf: KeyDerivationPrf.HMACSHA256,
-            iterationCount: 1000000,
-            numBytesRequested: 256 / 8
-        );
-    }
-
-    private string CreateToken(int userId)
-    {
-        Claim[] claims = [
-            new Claim("userId", userId.ToString())
-        ];
-
-        string? tokenKeyString = _config.GetSection("AppSettings:TokenKey").Value;
-
-        // Coalesce to null to solve the warning. Also NOTE, the string must be greater than 512 bits, or will get
-        // ArgumentOutOfRangeException: IDX10720: Unable to create KeyedHashAlgorithm for algorithm 'http://www.w3.org/2001/04/xmldsig-more#hmac-sha512',  
-        // the key size must be greater than: '512' bits, key has '384' bits. See https://aka.ms/IdentityModel/UnsafeRelaxHmacKeySizeValidation (Parameter 'keyBytes')
-        // When running tokenHandler.CreateToken below
-        SymmetricSecurityKey symmetricTokenKey = new(Encoding.UTF8.GetBytes(tokenKeyString ?? ""));
-
-        SigningCredentials credentials = new(symmetricTokenKey, SecurityAlgorithms.HmacSha512Signature);
-
-        SecurityTokenDescriptor descriptor = new()
-        {
-            Subject = new ClaimsIdentity(claims),
-            SigningCredentials = credentials,
-            Expires = DateTime.Now.AddDays(1)
-        };
-
-        // Just a class that has some of the methods we need to 
-        JwtSecurityTokenHandler tokenHandler = new();
-
-        SecurityToken token = tokenHandler.CreateToken(descriptor);
-
-        return tokenHandler.WriteToken(token); // converts it to a string that...
+        throw new Exception("Token is invalid");
     }
 }

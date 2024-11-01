@@ -1,6 +1,9 @@
 // builder perpetually listens for requests
+using System.Text;
 using DotnetAPI.Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +39,24 @@ builder.Services.AddCors((options) =>
 // Repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
+// Ensure token key is the same as in AuthController - get Configuration from builder
+string? tokenKeyString = builder.Configuration.GetSection("AppSettings:TokenKey").Value;
+SymmetricSecurityKey symmetricTokenKey = new(Encoding.UTF8.GetBytes(tokenKeyString ?? ""));
+
+// Making it flexible so we can use PostMan, create new token with Jwt.io, 
+TokenValidationParameters tokenValidationParameters = new TokenValidationParameters(){
+    IssuerSigningKey = symmetricTokenKey,
+    ValidateIssuer = false,
+    ValidateIssuerSigningKey = false,
+    ValidateAudience = false
+};
+
+// "Bearer <token>", common way to do this
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options => {
+                    options.TokenValidationParameters = tokenValidationParameters;
+                });
+
 //////////////// app below ////////////////////////
 
 var app = builder.Build();
@@ -52,6 +73,10 @@ else
     //  and use SSL certificate
     app.UseHttpsRedirection();
 }
+
+app.UseAuthentication();
+
+app.UseAuthorization();
 
 // Setup routes
 app.MapControllers();
