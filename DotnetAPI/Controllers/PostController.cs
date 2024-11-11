@@ -76,6 +76,23 @@ public class PostController : ControllerBase
         return _dapper.LoadDataSingle<Post>(getPostFromIdSql);
     }
 
+    [HttpGet("PostsBySearch/{searchParam}")]
+    public IEnumerable<Post> PostsBySearch(string searchParam)
+    {
+        string getPostsSql = $@"SELECT [PostId],
+                                    [UserId],
+                                    [PostTitle],
+                                    [PostContent],
+                                    [PostCreated],
+                                    [PostUpdated] 
+                FROM TutorialAppSchema.Posts
+                WHERE PostTitle LIKE '%{searchParam}%'
+                    OR  PostContent LIKE '%{searchParam}%'";
+
+        return _dapper.LoadData<Post>(getPostsSql);
+    }
+
+
 /* TODO:
 "escape" the apostrophe for the SQL query by replacing it with two apostrophes, i.e.,
  stringValue.Replace("'", "''")

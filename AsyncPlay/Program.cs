@@ -7,6 +7,11 @@ internal class Program
     {
         Console.WriteLine("Program started");
 
+        dynamic isItInt = 10;
+        var orThis = 12 + isItInt;
+        int? canI = orThis as int?; 
+        Console.WriteLine("Is it an integer is: " + isItInt);
+
         var task1 = new Task(() =>
         {
             Thread.Sleep(100);
