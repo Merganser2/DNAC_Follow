@@ -67,6 +67,6 @@ WHERE EXISTS (
 SELECT UserId, Salary FROM TutorialAppSchema.UserSalary
 UNION -- Distinct /* Between the two queries */
 --UNION ALL -- not Distinct between the two
-SELECT UserId, Salary FROM TutorialAppSchema.UserSalary;
+SELECT UserId, Salary FROM TutorialAppSchema.UserSalary
 
 -- Side note: BETWEEN is inclusive of endpoints

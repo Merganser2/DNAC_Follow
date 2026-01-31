@@ -1,6 +1,11 @@
 USE DotNetCourseDatabase
 GO
 
+SELECT [Users].[UserId]
+FROM DotNetCourseDatabase.TutorialAppSchema.Users
+WHERE Users.Email = "fred@test.com"
+
+
 -- Taking our query from before, and adding a Clustered Index
 -- to make it faster. The UserSalary table will now be physically
 -- ordered by UserId such that SQL knows exactly where to find
